@@ -1,0 +1,16 @@
+cabal-version:       >=1.10
+name:                calculadora-de-juros
+version:             0.1.0.0
+synopsis:            Uma calculadora de juros implementada em Haskell.
+description:         Este projeto implementa uma calculadora de juros em Haskell.
+author:              Fernanda Felix, Gabriela Tamura, Mauricio Lura
+maintainer:          fernanda.felix0@outlook.com
+category:            Calculadora
+build-type:          Simple
+extra-source-files:  README.md
+
+executable calculadora-de-juros
+  main-is:             Main.hs
+  hs-source-dirs:      src
+  build-depends:       base >=4.7 && <5, containers, mtl
+  default-language:    Haskell2010
