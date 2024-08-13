@@ -25,8 +25,8 @@ calcularParcelaFixa valorFinanciado taxaMensal numParcelas =
   in (valorFinanciado * taxa * (1 + taxa) ^ fromIntegral numParcelas) / ((1 + taxa) ^ fromIntegral numParcelas - 1)
 
 -- Função para calcular o valor total pago e o custo efetivo total, utilizando foldl
-calcularCustoEFTotal :: Double -> Double -> Int -> (Double, Double)
-calcularCustoEFTotal parcela valorFinanciado numParcelas =
+calcularCETeTotalPago :: Double -> Double -> Int -> (Double, Double)
+calcularCETeTotalPago parcela valorFinanciado numParcelas =
   let parcelasList = replicate numParcelas parcela
       valorTotalPago = foldl' (+) 0 parcelasList
       custoEfetivoTotal = ((valorTotalPago - valorFinanciado) / valorFinanciado) * 100
@@ -52,7 +52,7 @@ adicionarSimulacao :: Double -> Double -> Int -> Double -> State Historico Simul
 adicionarSimulacao valorObjeto entrada numParcelas taxaMensal = do
   let valorFinanciado = valorObjeto - entrada
       parcela = calcularParcelaFixa valorFinanciado taxaMensal numParcelas
-      (valorTotalPago, custoEfetivoTotal) = calcularCustoEFTotal parcela valorFinanciado numParcelas
+      (valorTotalPago, custoEfetivoTotal) = calcularCETeTotalPago parcela valorFinanciado numParcelas
       simulacao = Simulacao valorObjeto entrada numParcelas taxaMensal valorFinanciado parcela custoEfetivoTotal valorTotalPago
   historico <- get
   put (simulacao : historico)
