@@ -24,29 +24,28 @@ calcularParcelaFixa valorFinanciado taxaMensal numParcelas =
   let taxa = taxaMensal / 100
   in (valorFinanciado * taxa * (1 + taxa) ^ fromIntegral numParcelas) / ((1 + taxa) ^ fromIntegral numParcelas - 1)
 
--- Função para calcular o valor total pago e o custo efetivo total
+-- Função para calcular o valor total pago e o custo efetivo total, utilizando foldl
 calcularCustoEFTotal :: Double -> Double -> Int -> (Double, Double)
 calcularCustoEFTotal parcela valorFinanciado numParcelas =
-  let valorTotalPago = parcela * fromIntegral numParcelas
+  let parcelasList = replicate numParcelas parcela
+      valorTotalPago = foldl' (+) 0 parcelasList
       custoEfetivoTotal = ((valorTotalPago - valorFinanciado) / valorFinanciado) * 100
   in (valorTotalPago, custoEfetivoTotal)
 
--- Função para gerar a tabela de amortização usando folding
+-- Função para gerar a tabela de amortização de forma recursiva
 gerarTabelaAmortizacao :: Double -> Double -> Int -> Double -> [(Int, Double, Double, Double, Double)]
-gerarTabelaAmortizacao valorFinanciado taxaMensal numParcelas parcela =
-  let taxa = taxaMensal / 100
-      loop saldoDevedor i
-        | i > numParcelas = []
-        | otherwise =
-            let juros = saldoDevedor * taxa
-                amortizacao = parcela - juros
-                saldoDevedorNovo = saldoDevedor - amortizacao
-            in (i, parcela, juros, amortizacao, saldoDevedorNovo) : loop saldoDevedorNovo (i + 1)
-  in loop valorFinanciado 1
-
--- Função para calcular o total de juros pagos no histórico usando folding
-calcularTotalJuros :: Historico -> Double
-calcularTotalJuros = foldl' (\acc sim -> acc + (parcelaMensal sim * fromIntegral (parcelas sim)) - valorFinanciado sim) 0
+gerarTabelaAmortizacao valorFinanciado taxaMensal numParcelas parcela = gerarParcelas valorFinanciado 1
+  where
+    taxa = taxaMensal / 100
+    
+    gerarParcelas :: Double -> Int -> [(Int, Double, Double, Double, Double)]
+    gerarParcelas saldoDevedor i
+      | i > numParcelas = []
+      | otherwise =
+          let juros = saldoDevedor * taxa
+              amortizacao = parcela - juros
+              saldoDevedorNovo = saldoDevedor - amortizacao
+          in (i, parcela, juros, amortizacao, saldoDevedorNovo) : gerarParcelas saldoDevedorNovo (i + 1)
 
 -- Adicionar simulação ao histórico
 adicionarSimulacao :: Double -> Double -> Int -> Double -> State Historico Simulacao
