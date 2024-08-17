@@ -85,10 +85,10 @@ main = do
         putStrLn "Digite o valor do objeto financiado: "
         hFlush stdout
         valorObjeto <- readLn
-        putStrLn "Digite o valor da valorEntrada: "
+        putStrLn "Digite o valor da entrada: "
         hFlush stdout
         valorEntrada <- readLn
-        putStrLn "Digite o número total de qntdParcelas: "
+        putStrLn "Digite o número total de parcelas: "
         hFlush stdout
         qntdParcelas <- readLn
         putStrLn "Digite a taxa de juros mensal (em porcentagem, por exemplo, 1 para 1%): "
