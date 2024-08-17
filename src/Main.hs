@@ -27,17 +27,20 @@ data Simulacao = Simulacao
   , valorTotalPago     :: ValorTotalPago
   } deriving Show
 
+-- Função para calcular o valor da parcela fixa
 calcularParcelaFixa :: ValorFinanciado -> TaxaMensal -> QntdParcelas -> ValorParcela
 calcularParcelaFixa valorFinanciado taxaMensal qntdParcelas =
   let taxa = taxaMensal / 100
   in (valorFinanciado * taxa * (1 + taxa) ^ fromIntegral qntdParcelas) / ((1 + taxa) ^ fromIntegral qntdParcelas - 1)
 
+-- Função para calcular o valor total pago e o custo efetivo total, utilizando foldl
 calcularCETeTotalPago :: ValorParcela -> ValorFinanciado -> QntdParcelas -> (ValorTotalPago, CustoEfetivoTotal)
 calcularCETeTotalPago parcela valorFinanciado qntdParcelas =
   let valorTotalPago = fromIntegral qntdParcelas * parcela
       custoEfetivoTotal = ((valorTotalPago - valorFinanciado) / valorFinanciado) * 100
   in (valorTotalPago, custoEfetivoTotal)
 
+-- Função para gerar a tabela de amortização de forma recursiva
 gerarTabelaAmortizacao :: ValorFinanciado -> TaxaMensal -> QntdParcelas -> ValorParcela -> [(IdParcela, ValorParcela, JurosParcela, ValorAmortizado, SaldoDevedor)]
 gerarTabelaAmortizacao valorFinanciado taxaMensal qntdParcelas parcela = gerarParcelas valorFinanciado 1
   where
@@ -50,6 +53,7 @@ gerarTabelaAmortizacao valorFinanciado taxaMensal qntdParcelas parcela = gerarPa
               saldoDevedorNovo = saldoDevedor - amortizacao
           in (i, parcela, juros, amortizacao, saldoDevedorNovo) : gerarParcelas saldoDevedorNovo (i + 1)
 
+-- Formatar números com duas casas decimais
 formatarDouble :: Double -> String
 formatarDouble = printf "%.2f"
 
