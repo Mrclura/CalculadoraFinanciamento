@@ -1,5 +1,6 @@
 module Main where
 
+import Data.List (foldl')
 import System.IO (hFlush, stdout)
 import Text.Printf (printf)
 
@@ -36,7 +37,8 @@ calcularParcelaFixa valorFinanciado taxaMensal qntdParcelas =
 -- Função para calcular o valor total pago e o custo efetivo total, utilizando foldl
 calcularCETeTotalPago :: ValorParcela -> ValorFinanciado -> QntdParcelas -> (ValorTotalPago, CustoEfetivoTotal)
 calcularCETeTotalPago parcela valorFinanciado qntdParcelas =
-  let valorTotalPago = fromIntegral qntdParcelas * parcela
+  let qntdParcelasList = replicate qntdParcelas parcela
+      valorTotalPago = foldl' (+) 0 qntdParcelasList
       custoEfetivoTotal = ((valorTotalPago - valorFinanciado) / valorFinanciado) * 100
   in (valorTotalPago, custoEfetivoTotal)
 
@@ -45,6 +47,8 @@ gerarTabelaAmortizacao :: ValorFinanciado -> TaxaMensal -> QntdParcelas -> Valor
 gerarTabelaAmortizacao valorFinanciado taxaMensal qntdParcelas parcela = gerarParcelas valorFinanciado 1
   where
     taxa = taxaMensal / 100
+    
+    gerarParcelas :: SaldoDevedor -> IdParcela -> [(IdParcela, ValorParcela, JurosParcela, ValorAmortizado, SaldoDevedor)]
     gerarParcelas saldoDevedor i
       | i > qntdParcelas = []
       | otherwise =
