@@ -4,6 +4,6 @@ O relatório com maiores explicações e detalhes se encontra na raiz do projeto
 
 ## Integrantes
 
-Fernanda Felix da Silva - 11201921613
-Gabriela Tamura Makibara - 11201920430
-Maurício Lura Segura - 11201720106
+* Fernanda Felix da Silva - 11201921613
+* Gabriela Tamura Makibara - 11201920430
+* Maurício Lura Segura - 11201720106
