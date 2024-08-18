@@ -1,4 +1,4 @@
-# CalculadoraFinanciamento
+# Calculadora de Financiamento
 Calculadora financeira para cáculo de juros e financimento, para a matéria de Programação Funcional da UFABC (2024.2).
 O relatório com maiores explicações e detalhes se encontra na raiz do projeto, com o nome de "Projeto 1 Progrmação Funcional.pdf".
 
