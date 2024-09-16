@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
-
-import Graphics.Gloss
+import Graphics.Rendering.Chart.Easy
+import Graphics.Rendering.Chart.Backend.Diagrams
 import Data.List (foldl')
 import System.IO (hFlush, stdout)
 import Text.Printf (printf)
@@ -110,18 +109,15 @@ exibirComparativoParcelasJuros tabelaPrice tabelaSAC = do
 gerarTabelaParcelasJuros :: [(IdParcela, ValorParcela, JurosParcela, ValorAmortizado, SaldoDevedor)] -> [(IdParcela, ValorParcela, JurosParcela)]
 gerarTabelaParcelasJuros tabela = map (\(idParcela, valorParcela, juros, _, _) -> (idParcela, valorParcela, juros)) tabela
 
--- Função para transformar dados em coordenadas para gloss
-toFloatTuple :: (Double, Double) -> (Float, Float)
-toFloatTuple (x, y) = (realToFrac x, realToFrac y)
-
--- Função para desenhar gráficos com gloss
-drawChart :: [(Double, ValorParcela)] -> [(Double, ValorParcela)] -> Picture
-drawChart scaleData scaleDataSAC = Pictures
-  [ color green (line (map toFloatTuple scaleData))
-  , color blue (line (map toFloatTuple scaleDataSAC))
-  , Pictures [ translate (realToFrac x) (realToFrac y) (color red (circle 5)) | (x, y) <- scaleData ]
-  , Pictures [ translate (realToFrac x) (realToFrac y) (color blue (circle 5)) | (x, y) <- scaleDataSAC ]
-  ]
+-- Função para desenhar gráficos com Chart
+drawChart :: [(Int, ValorParcela)] -> [(Int, ValorParcela)] -> IO ()
+drawChart tabelaPrice tabelaSAC = do
+  toFile def "comparativo.png" $ do
+    layout_title .= "Comparativo de Parcelas (Price vs SAC)"
+    layout_x_axis . laxis_title .= "Mês"
+    layout_y_axis . laxis_title .= "Valor da Parcela"
+    plot (line "Parcelas Price" [map (\(x, y) -> (fromIntegral x :: Double, y)) tabelaPrice])
+    plot (line "Parcelas SAC" [map (\(x, y) -> (fromIntegral x :: Double, y)) tabelaSAC])
 
 main :: IO ()
 main = do
@@ -159,6 +155,6 @@ main = do
   putStrLn $ "Custo Efetivo Total (CET) SAC: " ++ formatarDouble cetSAC ++ "%"
 
   -- Desenhando gráficos
-  let scaleData = [(fromIntegral i * 10, valorParcela) | i <- [1..qntdParcelas], let (_, valorParcela, _, _, _) = tabelaPrice !! (i - 1)]
-  let scaleDataSAC = [(fromIntegral i * 10, valorParcela) | i <- [1..qntdParcelas], let (_, valorParcela, _, _, _) = tabelaSAC !! (i - 1)]
-  display (InWindow "Comparativo de Amortização" (800, 600) (100, 100)) white (drawChart scaleData scaleDataSAC)
+  let tabelaPriceChart = [(i, valorParcela) | (i, valorParcela, _, _, _) <- tabelaPrice]
+  let tabelaSACChart = [(i, valorParcela) | (i, valorParcela, _, _, _) <- tabelaSAC]
+  drawChart tabelaPriceChart tabelaSACChart
