@@ -12,5 +12,5 @@ extra-source-files:  README.md
 executable calculadora-de-juros
   main-is:             Main.hs
   hs-source-dirs:      src
-  build-depends:       base >=4.7 && <5, containers, mtl
+  build-depends:       base >=4.7 && <5, containers, mtl, gloss
   default-language:    Haskell2010

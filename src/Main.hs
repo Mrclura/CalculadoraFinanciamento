@@ -1,5 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
+import Graphics.Gloss
 import Data.List (foldl')
 import System.IO (hFlush, stdout)
 import Text.Printf (printf)
@@ -88,10 +91,10 @@ exibirTabelaAmortizacao :: [(IdParcela, ValorParcela, JurosParcela, ValorAmortiz
 exibirTabelaAmortizacao tabela = do
   putStrLn $ "\nTabela de Amortização"
   putStrLn "Parcela\tValor\tJuros\tAmortização\tSaldo Devedor"
-  mapM_ (\(parcelaNum, valor, juros, amortizacao, saldoDevedor) ->
+  mapM_ (\(parcelaNum, valor, juros, amortizacao, saldoDevedor) -> 
            putStrLn $ printf "%d\t%s\t%s\t%s\t\t%s"
              parcelaNum (formatarDouble valor) (formatarDouble juros) (formatarDouble amortizacao) (formatarDouble saldoDevedor)) tabela
-             
+
 -- Função para exibir o comparativo de parcelas e juros pagos por mês entre Price e SAC
 exibirComparativoParcelasJuros :: [(IdParcela, ValorParcela, JurosParcela)] -> [(IdParcela, ValorParcela, JurosParcela)] -> IO ()
 exibirComparativoParcelasJuros tabelaPrice tabelaSAC = do
@@ -106,6 +109,19 @@ exibirComparativoParcelasJuros tabelaPrice tabelaSAC = do
 -- Função auxiliar para gerar uma tabela apenas com parcelas e juros
 gerarTabelaParcelasJuros :: [(IdParcela, ValorParcela, JurosParcela, ValorAmortizado, SaldoDevedor)] -> [(IdParcela, ValorParcela, JurosParcela)]
 gerarTabelaParcelasJuros tabela = map (\(idParcela, valorParcela, juros, _, _) -> (idParcela, valorParcela, juros)) tabela
+
+-- Função para transformar dados em coordenadas para gloss
+toFloatTuple :: (Double, Double) -> (Float, Float)
+toFloatTuple (x, y) = (realToFrac x, realToFrac y)
+
+-- Função para desenhar gráficos com gloss
+drawChart :: [(Double, ValorParcela)] -> [(Double, ValorParcela)] -> Picture
+drawChart scaleData scaleDataSAC = Pictures
+  [ color green (line (map toFloatTuple scaleData))
+  , color blue (line (map toFloatTuple scaleDataSAC))
+  , Pictures [ translate (realToFrac x) (realToFrac y) (color red (circle 5)) | (x, y) <- scaleData ]
+  , Pictures [ translate (realToFrac x) (realToFrac y) (color blue (circle 5)) | (x, y) <- scaleDataSAC ]
+  ]
 
 main :: IO ()
 main = do
@@ -124,43 +140,25 @@ main = do
   let valorFinanciado = valorObjeto - valorEntrada
   
   -- Cálculos para a tabela Price
-  -- Na tabela Price, o valor de parcela é constante e o valor de amortização é variável
   let parcelaPrice = calcularParcelaPrice valorFinanciado taxa qntdParcelas
   let tabelaPrice = gerarTabelaPrice valorFinanciado taxa qntdParcelas parcelaPrice
   let valorTotalPagoPrice = calcularValorTotalPago tabelaPrice
-  let custoEfetivoTotalPrice = calcularCET valorTotalPagoPrice valorFinanciado
+  let cetPrice = calcularCET valorTotalPagoPrice valorFinanciado
 
   -- Cálculos para a tabela SAC
-  -- Na tabela SAC, o valor de amortização é constante e o valor de parcela é variável
   let tabelaSAC = gerarTabelaSAC valorFinanciado taxa qntdParcelas
   let valorTotalPagoSAC = calcularValorTotalPago tabelaSAC
-  let custoEfetivoTotalSAC = calcularCET valorTotalPagoSAC valorFinanciado
+  let cetSAC = calcularCET valorTotalPagoSAC valorFinanciado
 
   -- Exibição das tabelas
-  putStrLn $ "\n\nValor financiado: " ++ formatarDouble valorFinanciado 
-  putStrLn $ "\n---- SIMULAÇÃO PRICE ----"
-  putStrLn $ "Parcela inicial: " ++ formatarDouble (snd5 (head tabelaPrice)) 
-  putStrLn $ "Custo efetivo total (CET): " ++ formatarDouble custoEfetivoTotalPrice ++ "%" 
-  putStrLn $ "Valor total pago: " ++ formatarDouble valorTotalPagoPrice
   exibirTabelaAmortizacao tabelaPrice
-  putStrLn $ "\n\n---- SIMULAÇÃO SAC ----"
-  putStrLn $ "Parcela inicial: " ++ formatarDouble (snd5 (head tabelaSAC)) 
-  putStrLn $ "Custo efetivo total (CET): " ++ formatarDouble custoEfetivoTotalSAC ++ "%" 
-  putStrLn $ "Valor total pago: " ++ formatarDouble valorTotalPagoSAC
   exibirTabelaAmortizacao tabelaSAC
-
-  -- Exibição do comparativo de parcelas e juros
-  putStrLn $ "\n\n---- Resumo comparativo ----"
-  putStrLn $ "Tabela Price: Valor Total Pago: " ++ formatarDouble valorTotalPagoPrice ++ ", CET: " ++ formatarDouble custoEfetivoTotalPrice ++ "%"
-  putStrLn $ "Tabela SAC: Valor Total Pago: " ++ formatarDouble valorTotalPagoSAC ++ ", CET: " ++ formatarDouble custoEfetivoTotalSAC ++ "%"
-
-  if valorTotalPagoPrice > valorTotalPagoSAC
-    then putStrLn "Você pagará mais com a Tabela Price."
-    else if valorTotalPagoPrice < valorTotalPagoSAC
-      then putStrLn "Você pagará mais com a Tabela SAC."
-      else putStrLn "O valor total pago é o mesmo para ambas as tabelas."
   exibirComparativoParcelasJuros (gerarTabelaParcelasJuros tabelaPrice) (gerarTabelaParcelasJuros tabelaSAC)
 
--- Função auxiliar para extrair o segundo elemento de uma tupla 5 elementos
-snd5 :: (a, b, c, d, e) -> b
-snd5 (_, b, _, _, _) = b
+  putStrLn $ "\nCusto Efetivo Total (CET) Price: " ++ formatarDouble cetPrice ++ "%"
+  putStrLn $ "Custo Efetivo Total (CET) SAC: " ++ formatarDouble cetSAC ++ "%"
+
+  -- Desenhando gráficos
+  let scaleData = [(fromIntegral i * 10, valorParcela) | i <- [1..qntdParcelas], let (_, valorParcela, _, _, _) = tabelaPrice !! (i - 1)]
+  let scaleDataSAC = [(fromIntegral i * 10, valorParcela) | i <- [1..qntdParcelas], let (_, valorParcela, _, _, _) = tabelaSAC !! (i - 1)]
+  display (InWindow "Comparativo de Amortização" (800, 600) (100, 100)) white (drawChart scaleData scaleDataSAC)
