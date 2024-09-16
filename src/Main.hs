@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 import Graphics.Rendering.Chart.Easy
 import Graphics.Rendering.Chart.Backend.Diagrams
 import Data.List (foldl')
+import Control.Monad.State
 import System.IO (hFlush, stdout)
 import Text.Printf (printf)
 
@@ -29,6 +31,8 @@ data Simulacao = Simulacao
   , custoEfetivoTotal  :: CustoEfetivoTotal
   , valorTotalPago     :: ValorTotalPago
   } deriving Show
+
+type SimulacaoState = State [Simulacao]
 
 -- PRICE: Função para calcular o valor da parcela
 calcularParcelaPrice :: ValorFinanciado -> TaxaMensal -> QntdParcelas -> ValorParcela
@@ -119,6 +123,29 @@ drawChart tabelaPrice tabelaSAC = do
     plot (line "Parcelas Price" [map (\(x, y) -> (fromIntegral x :: Double, y)) tabelaPrice])
     plot (line "Parcelas SAC" [map (\(x, y) -> (fromIntegral x :: Double, y)) tabelaSAC])
 
+-- Função para adicionar uma simulação ao estado
+adicionarSimulacao :: Simulacao -> SimulacaoState ()
+adicionarSimulacao simulacao = state $ \simulacoes -> ((), simulacao : simulacoes)
+
+-- Função para coletar dados da simulação e adicionar ao estado
+processarSimulacao :: ValorObjeto -> ValorEntrada -> QntdParcelas -> TaxaMensal -> SimulacaoState ()
+processarSimulacao valorObjeto valorEntrada qntdParcelas taxa = do
+  let valorFinanciado = valorObjeto - valorEntrada
+      parcelaPrice = calcularParcelaPrice valorFinanciado taxa qntdParcelas
+      tabelaPrice = gerarTabelaPrice valorFinanciado taxa qntdParcelas parcelaPrice
+      valorTotalPagoPrice = calcularValorTotalPago tabelaPrice
+      cetPrice = calcularCET valorTotalPagoPrice valorFinanciado
+
+      tabelaSAC = gerarTabelaSAC valorFinanciado taxa qntdParcelas
+      valorTotalPagoSAC = calcularValorTotalPago tabelaSAC
+      cetSAC = calcularCET valorTotalPagoSAC valorFinanciado
+
+      simulacaoPrice = Simulacao valorObjeto valorEntrada qntdParcelas taxa valorFinanciado parcelaPrice cetPrice valorTotalPagoPrice
+      simulacaoSAC = Simulacao valorObjeto valorEntrada qntdParcelas taxa valorFinanciado (calcularParcelaSAC valorFinanciado qntdParcelas) cetSAC valorTotalPagoSAC
+
+  adicionarSimulacao simulacaoPrice
+  adicionarSimulacao simulacaoSAC
+
 main :: IO ()
 main = do
   putStrLn "Digite o valor do objeto financiado: "
@@ -133,41 +160,33 @@ main = do
   putStrLn "Digite a taxa de juros mensal (em porcentagem, por exemplo, 1 para 1%): "
   hFlush stdout
   taxa <- readLn
-  let valorFinanciado = valorObjeto - valorEntrada
-  
-  -- Cálculos para a tabela Price
-  let parcelaPrice = calcularParcelaPrice valorFinanciado taxa qntdParcelas
-  let tabelaPrice = gerarTabelaPrice valorFinanciado taxa qntdParcelas parcelaPrice
-  let valorTotalPagoPrice = calcularValorTotalPago tabelaPrice
-  let cetPrice = calcularCET valorTotalPagoPrice valorFinanciado
 
-  -- Cálculos para a tabela SAC
-  let tabelaSAC = gerarTabelaSAC valorFinanciado taxa qntdParcelas
-  let valorTotalPagoSAC = calcularValorTotalPago tabelaSAC
-  let cetSAC = calcularCET valorTotalPagoSAC valorFinanciado
+  let simulacaoInicial = []
+  let ((), simulacoes) = runState (processarSimulacao valorObjeto valorEntrada qntdParcelas taxa) simulacaoInicial
 
-  -- Exibição das tabelas
+  let tabelaPrice = gerarTabelaPrice (valorObjeto - valorEntrada) taxa qntdParcelas (calcularParcelaPrice (valorObjeto - valorEntrada) taxa qntdParcelas)
+      tabelaSAC = gerarTabelaSAC (valorObjeto - valorEntrada) taxa qntdParcelas
+      tabelaPriceChart = [(i, valorParcela) | (i, valorParcela, _, _, _) <- tabelaPrice]
+      tabelaSACChart = [(i, valorParcela) | (i, valorParcela, _, _, _) <- tabelaSAC]
+
   putStrLn "\n--- SIMULAÇÃO PRICE ---"
-  putStrLn $ "\nParcela Inicial PRICE: " ++ formatarDouble parcelaPrice
-  putStrLn $ "Valor Total Pago PRICE: " ++ formatarDouble valorTotalPagoPrice
-  putStrLn $ "Custo Efetivo Total (CET) PRICE: " ++ formatarDouble cetPrice ++ "%"
-  
+  putStrLn $ "\nParcela Inicial PRICE: " ++ formatarDouble (calcularParcelaPrice (valorObjeto - valorEntrada) taxa qntdParcelas)
+  putStrLn $ "Valor Total Pago PRICE: " ++ formatarDouble (calcularValorTotalPago tabelaPrice)
+  putStrLn $ "Custo Efetivo Total (CET) PRICE: " ++ formatarDouble (calcularCET (calcularValorTotalPago tabelaPrice) (valorObjeto - valorEntrada)) ++ "%"
+
   putStrLn "--------------------------------------------------------------------------"
-  exibirTabelaAmortizacao  "Tabela de Amortização" tabelaPrice
+  exibirTabelaAmortizacao "Tabela de Amortização" tabelaPrice
 
   putStrLn "\n--- Simulação SAC ---"
-  putStrLn $ "\nParcela Inicial SAC: " ++ formatarDouble (calcularParcelaSAC valorFinanciado qntdParcelas)
-  putStrLn $ "Valor Total Pago SAC: " ++ formatarDouble valorTotalPagoSAC
-  putStrLn $ "Custo Efetivo Total (CET) SAC: " ++ formatarDouble cetSAC ++ "%"
+  putStrLn $ "\nParcela Inicial SAC: " ++ formatarDouble (calcularParcelaSAC (valorObjeto - valorEntrada) qntdParcelas)
+  putStrLn $ "Valor Total Pago SAC: " ++ formatarDouble (calcularValorTotalPago tabelaSAC)
+  putStrLn $ "Custo Efetivo Total (CET) SAC: " ++ formatarDouble (calcularCET (calcularValorTotalPago tabelaSAC) (valorObjeto - valorEntrada)) ++ "%"
 
   putStrLn "--------------------------------------------------------------------------"
   exibirTabelaAmortizacao "Tabela de Amortização" tabelaSAC
-  
 
   -- Exibindo comparativo
   exibirComparativoParcelasJuros (gerarTabelaParcelasJuros tabelaPrice) (gerarTabelaParcelasJuros tabelaSAC)
 
   -- Desenhando gráficos
-  let tabelaPriceChart = [(i, valorParcela) | (i, valorParcela, _, _, _) <- tabelaPrice]
-  let tabelaSACChart = [(i, valorParcela) | (i, valorParcela, _, _, _) <- tabelaSAC]
   drawChart tabelaPriceChart tabelaSACChart
