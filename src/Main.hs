@@ -86,9 +86,9 @@ formatarDouble :: Double -> String
 formatarDouble = printf "%.2f"
 
 -- Função para exibir a tabela de amortização completa
-exibirTabelaAmortizacao :: [(IdParcela, ValorParcela, JurosParcela, ValorAmortizado, SaldoDevedor)] -> IO ()
-exibirTabelaAmortizacao tabela = do
-  putStrLn $ "\nTabela de Amortização"
+exibirTabelaAmortizacao :: String -> [(IdParcela, ValorParcela, JurosParcela, ValorAmortizado, SaldoDevedor)] -> IO ()
+exibirTabelaAmortizacao titulo tabela = do
+  putStrLn $ "\n" ++ titulo
   putStrLn "Parcela\tValor\tJuros\tAmortização\tSaldo Devedor"
   mapM_ (\(parcelaNum, valor, juros, amortizacao, saldoDevedor) -> 
            putStrLn $ printf "%d\t%s\t%s\t%s\t\t%s"
@@ -147,12 +147,25 @@ main = do
   let cetSAC = calcularCET valorTotalPagoSAC valorFinanciado
 
   -- Exibição das tabelas
-  exibirTabelaAmortizacao tabelaPrice
-  exibirTabelaAmortizacao tabelaSAC
-  exibirComparativoParcelasJuros (gerarTabelaParcelasJuros tabelaPrice) (gerarTabelaParcelasJuros tabelaSAC)
+  putStrLn "\n--- SIMULAÇÃO PRICE ---"
+  putStrLn $ "\nParcela Inicial PRICE: " ++ formatarDouble parcelaPrice
+  putStrLn $ "Valor Total Pago PRICE: " ++ formatarDouble valorTotalPagoPrice
+  putStrLn $ "Custo Efetivo Total (CET) PRICE: " ++ formatarDouble cetPrice ++ "%"
+  
+  putStrLn "--------------------------------------------------------------------------"
+  exibirTabelaAmortizacao  "Tabela de Amortização" tabelaPrice
 
-  putStrLn $ "\nCusto Efetivo Total (CET) Price: " ++ formatarDouble cetPrice ++ "%"
+  putStrLn "\n--- Simulação SAC ---"
+  putStrLn $ "\nParcela Inicial SAC: " ++ formatarDouble (calcularParcelaSAC valorFinanciado qntdParcelas)
+  putStrLn $ "Valor Total Pago SAC: " ++ formatarDouble valorTotalPagoSAC
   putStrLn $ "Custo Efetivo Total (CET) SAC: " ++ formatarDouble cetSAC ++ "%"
+
+  putStrLn "--------------------------------------------------------------------------"
+  exibirTabelaAmortizacao "Tabela de Amortização" tabelaSAC
+  
+
+  -- Exibindo comparativo
+  exibirComparativoParcelasJuros (gerarTabelaParcelasJuros tabelaPrice) (gerarTabelaParcelasJuros tabelaSAC)
 
   -- Desenhando gráficos
   let tabelaPriceChart = [(i, valorParcela) | (i, valorParcela, _, _, _) <- tabelaPrice]
